@@ -23,7 +23,7 @@ The guide will **not** explain how to:
 
 1. Get Transmission running using the GUI, set up storage et cetera.
 I recommend setting a username and password for the remote client.
-2. SSH into the jail
+2. SSH into the jail.
 ```bash
 # list all available jails, check the index of the transmission jail
 jls
@@ -50,8 +50,11 @@ cp pia/crl.rsa.2048.pem .
 # pick a server to connect to (needs to support port forwarding - see list above)
 cp pia/Romania.ovpn openvpn.conf
 # put your PIA username/password in a file (example: x0000000/password)
-printf "x0000000\npassword\n" > pass.txt
-sed -i '' 's/auth-user-pass/auth-user-pass pass.txt/' openvpn.conf
+cat > pia.credentials <<X
+x0000000
+password
+X
+sed -i '' 's/auth-user-pass/auth-user-pass pia.credentials/' openvpn.conf
 # make OpenVPN launch at boot time
 cat > /etc/rc.conf.d/openvpn <<X
 openvpn_enable="YES"
@@ -70,8 +73,32 @@ firewall_enable="YES"
 firewall_script="/usr/local/etc/openvpn/ipfw.rules"
 X
 ```
-5. Set up the scripts to automate port forwarding and downtime detection.
+5. Set up the scripts that automate port forwarding and downtime detection.
 ```bash
-# get the scripts
-# TODO
+# get the scripts (read the comments in them for details)
+# if you decided to put all this into a directory other than default
+# (/usr/local/etc/openvpn), be sure to edit the scripts (change $path variable)
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_up.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_request.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_monitor.sh
+# configure openvpn to execute the script at start time
+cat >> openvpn.conf <<X
+up /usr/local/etc/openvpn/vpn_up.sh
+up-restart
+X
+# if you set your credentials for Transmission RPC, write them to a file
+cat > transmission.credentials <<X
+username
+password
+X
+# in case the port number acquisition fails, the script can notify about that
+# by writing to a given file - just store its path under notify.path
+# (this is recommended, as the downtime detector will also write there)
+printf '/media/downloads/VPN.log' > notify.path
+# finally, set cron to run the monitoring script periodically and as root
+# (adjust the path if necessary)
+echo "* * * * * /usr/local/etc/openvpn/vpn_monitor.sh" > cron.tab
+crontab cron.tab
 ```
+6. Exit the jail and restart it.
+You can check that it works using [TorGuard's tool for torrent IP checking](torguard.net/checkmytorrentipaddress.php).
