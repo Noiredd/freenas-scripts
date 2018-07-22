@@ -16,8 +16,8 @@ This guide will let you accomplish the following:
 * make sure that whenever the connection goes down, it will automatically restart.
 
 The guide will **not** explain how to:
-* set up Transmission,
-* connect the storage etc.
+* set up Transmission (read about it in the [guide](http://doc.freenas.org/11/plugins.html#installing-plugins)),
+* attach the storage (read about it in the [guide](http://doc.freenas.org/11/jails.html#add-storage)).
 
 #### Guide
 
@@ -81,6 +81,9 @@ X
 wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_up.sh
 wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_request.sh
 wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_monitor.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_log.sh
+# set the execution privilege bit
+chmod +x vpn_*
 # configure openvpn to execute the script at start time
 cat >> openvpn.conf <<X
 up /usr/local/etc/openvpn/vpn_up.sh
@@ -94,7 +97,7 @@ X
 # in case the port number acquisition fails, the script can notify about that
 # by writing to a given file - just store its path under notify.path
 # (this is recommended, as the downtime detector will also write there)
-printf '/media/downloads/VPN.log' > notify.path
+printf '/media/downloads/VPN.log' > notify.path # whatever path
 # finally, set cron to run the monitoring script periodically and as root
 # (adjust the path if necessary)
 echo "* * * * * /usr/local/etc/openvpn/vpn_monitor.sh" > cron.tab
@@ -102,3 +105,14 @@ crontab cron.tab
 ```
 6. Exit the jail and restart it.
 You can check that it works using [TorGuard's tool for torrent IP checking](torguard.net/checkmytorrentipaddress.php).
+
+#### Caveats
+The reason a separate monitoring script ran by cron is needed is due to some problems I have had with putting everything in a single up script.
+When the entire script was called by openvpn, I could never set the port using `transmission-remote`.
+Simply nothing would happen, no error message even.
+After digging some more (read on [SO](https://unix.stackexchange.com/q/447421/293652) if you're curious), I found that `transmission-remote` would segfault when it was called by openvpn's up script - even though I could run the commands myself from bash.  
+As a workaround, I use the fact that cron can execute tasks as root.
+Up script obtains the port and stores it in a file,
+and a periodic cron job reads it and sets the port on `transmission-remote`, then deletes it.
+
+In the long run it's not such a bad thing, because the periodic task is necessary anyway: to scan for VPN downtimes and restart the service.
