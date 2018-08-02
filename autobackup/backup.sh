@@ -1,3 +1,5 @@
+#!/usr/local/bin/bash
+
 #Automatic encrypted backup utility
 #Exit codes:
 #   0 - backup completed
@@ -27,13 +29,12 @@ run_backup () {
     #This format implies that no whitespace characters are allowed in paths to be backed up!
     item=$1
     name=$2
-    arch=$(get_archive_path $name)".tar.gz"
-    echo "Adding $item to archive $arch..." >> $LOGFL
-    tar -cpvzf $arch $item 2>> $LOGFL
-    echo "Encrypting archive $arch using AES256-CBC..." >> $LOGFL
-    openssl aes-256-cbc -salt -in $arch -out $arch".aes" -pass file:$PASSFILE >> $LOGFL
-    echo "Removing unencrypted archive..." >> $LOGFL
-    rm $arch
+    arch=$(get_archive_path $name)".tar.gz.aes"
+    echo "Adding $item and encrypting to archive $arch..." >> $LOGFL
+    tar -cpzf - $item 2>>$LOGFL | openssl aes-256-cbc -salt -out $arch -pass file:$PASSFILE >> $BPATH/_ssl.log
+    #tar logs directly into the main log file, but openssl to an intermetiade one so the logs don't mix up
+    cat $BPATH/_ssl.log >> $LOGFL
+    rm $BPATH/_ssl.log
     echo "Done." >> $LOGFL
 }
 
@@ -107,8 +108,7 @@ echo "Disk device id:" $DISK_DEV >> $LOGFL
 
 #Assume that we mount the first partition of the disk
 DISK_PRT=$(ls /dev | grep "$DISK_DEV" | sed -n 2p)
-if [ -d "/mnt/$MOUNTDIR" ]; then
-else
+if [ ! -d "/mnt/$MOUNTDIR" ]; then
     mkdir /mnt/$MOUNTDIR
 fi
 mount "/dev/$DISK_PRT" "/mnt/$MOUNTDIR"
