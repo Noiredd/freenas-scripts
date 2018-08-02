@@ -9,8 +9,8 @@ I haven't built *all* of this code myself - parts have been adapted or straight 
 #### Contents:
 
 * [OpenVPN + Transmission](/openvpn) (with port forwarding and downtime detection)
-* autobackup (coming soon)
-* torrent management (maybe coming soon)
+* [AutoBackup](/autobackup) (have your server detect you've just connected an external HDD and automatically backup to it with encryption)
+* torrent management (maybe coming sometime)
 
 #### Disclaimer
 I am not a linux expert so I will not provide support for any of those scripts.

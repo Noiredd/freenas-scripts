@@ -34,7 +34,7 @@ jexec 4 tcsh
 The following guide is adapted from [Tango](https://forums.freenas.org/index.php?members/tango.44547/)'s [great guide](https://forums.freenas.org/index.php?threads/guide-setting-up-transmission-with-openvpn-and-pia.24566/), which has in turn been adapted from [fizassist](https://forums.freenas.org/index.php?members/fizassist.77752/)'s [earlier guide](https://forums.freenas.org/index.php?threads/guide-setting-up-transmission-with-openvpn-and-pia.24566/page-24#post-404858), and has bits of [shutyourj](https://www.reddit.com/user/shutyourj)'s [reddit tutorial](https://www.reddit.com/r/freenas/comments/41fhz3/configuration_guide_for_openvpn_and_ipfw_so_that/) in it.
 My personal preference is to set everything in `/usr/local/etc` - you might prefer a different location.  
 See the [list of PIA servers that allow port forwarding](https://www.privateinternetaccess.com/helpdesk/kb/articles/how-do-i-enable-port-forwarding-on-my-vpn).
-``` bash
+```bash
 cd /usr/local/etc
 mkdir openvpn
 cd openvpn

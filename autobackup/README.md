@@ -53,6 +53,7 @@ ada6: <WDC WD10EARS-00MVWB0 51.0AB51> s/n WD-xxxxxxxxxxxx detached
 ```
 I recommend using the disk serial number as the identifying string.
 Store it somewhere, it will be needed in step 3.
+
 2. Get the script.
 I recommend creating some new folder for the script and its configs, its temporary files etc.
 I created a folder `/opt/autobackup` and `cd`'s into it - so the rest of the guide assumes that `pwd` is that path.  
@@ -66,18 +67,19 @@ sed 's/\r\n/\n/g' <backup.sh >backup.sh
 ```
 **Important:** if you decided on a different path, you have to edit the script accordingly:
 variable `BPATH` (line 10) tells the script where to look for configs, put any temps and so on.
+
 3. Configuration - main part.  
 The script expects a file `main.conf` in its directory.
 It shall contain 5 lines (and nothing else, no whitespace, no comments etc):
- * identifying string of the disk - mentioned in step 1,
- * directory under which the disk will be mounted in `/mnt` - I leave it for the user to decide, to be sure there are no collisions
- (the path is relative to `/mnt`, so a value of `backup` will resolve to `/mnt/backup`),
- * path to put the backups, relative to the above path - in case you had other stuff on your disk and wanted to put the backups in the specific folder on it; can be left empty if you want the archives directly on the disk root
- (following the above example, `backups` will resolve to `/mnt/backup/backups`),
- * mail address to notify about progress,
- * path to a file containing the password to encrypt the backups (this line might have to be `\n`-terminated).
+    * identifying string of the disk - mentioned in step 1,
+    * directory under which the disk will be mounted in `/mnt` - I leave it for the user to decide, to be sure there are no collisions
+    (the path is relative to `/mnt`, so a value of `backup` will resolve to `/mnt/backup`),
+    * path to put the backups, relative to the above path - in case you had other stuff on your disk and wanted to put the backups in the specific folder on it; can be left empty if you want the archives directly on the disk root
+    (following the above example, `backups` will resolve to `/mnt/backup/backups`),
+    * mail address to notify about progress,
+    * path to a file containing the password to encrypt the backups (this line might have to be `\n`-terminated).
 
- Example config file:
+Example config file:
 ```
 WD-xxxxxxxxxxxx
 wd1tb
@@ -87,14 +89,13 @@ my_address@mail.net
 ```
 Which will mount the drive `WD-xxxxxxxxxxxx` under `/mnt/wd1tb` and put backups in `/mnt/wd1tb/backup`,
 encrypting them with the password found in `/opt/autobackup/password.txt`.
+
 4. Configuration - paths.  
 In this step, you describe which folders you want backed up. As mentioned, there are two modes of operation here, and two configuration files that follow.  
 In the file `paths.conf` you are supposed to put paths of all the folders you want entirely archived, compressed and encrypted.
 Those will be fully backed up on your disk.
-The format of the file is as follows:
-```
-/path/to/folder/being/backed-up archive-name
-```
+The format of the file is as follows:  
+`/path/to/folder/being/backed-up archive-name`
 This means all contents of `/path/to/folder/being/backed-up` will be archived in the file
 (following the example mount point from before) `/mnt/wd1tb/backup/yyyy-mm-dd-archive-name.tar.gz.aes` (substitute the current date for `yyyy-mm-dd`).
 Note how there is exactly a single whitespace allowed in the path - it separates the path from archive name.
@@ -110,6 +111,7 @@ Its format is like above, but the contents of each location will only be *listed
 Each path will be scanned breadth-first, and printed files-first, alphabetically sorted, formatted like `ls -l`.
 The resulting txt file will be archived, compressed and encrypted as above, and stored as `/mnt/wd1tb/backup/yyyy-mm-dd-archive-name.txt.tar.gz.aes`.
 Note the `.txt` in the filename - this is to distinguish the file list archive from a complete backup, if you choose to do both for some location.
+
 5. With the three configuration files in place, all there's left to do is to set up a `cron` job to execute the script periodically.
 Log in to your FreeNAS GUI, navigate to *Tasks*, then *Cron Jobs* and add a job.
 I *think* you have to be `root` to mount any disks so enter `root` as the *user*, then path to the script under *command* (in the example case: `/opt/autobackup/backup.sh`).
@@ -142,7 +144,7 @@ the script will probably be interrupted halfway and you will have to clean up ma
 Since my main machine is running Windows, I made some choices in the design so that the (encrypted) backups can be read from Windows.
 
 1. Partitions  
-Your disk should be formatted as UFS - I know of no other file system that is both writable from FreeNAS (this kills the NTFS) and readable from Windows (this kills ZFS).
+Your disk should be formatted as UFS - I know of no other file system that is both writable from FreeNAS (this eliminates NTFS) and readable from Windows (this eliminates ZFS).
 I've followed [Randall Wood's guide](http://therandymon.com/index.php?/archives/285-Backing-Up-FreeNAS-to-an-external-hard-drive.html) to do that.  
 After plugging in your disk, figure out its device id (either by reading `dmesg` or by manually checking `ls /dev`).
 In my case it was `ada6`.
@@ -157,6 +159,7 @@ newfs -O2 -U /dev/ada6a  # Format the partition with UFS2 and soft updates
 I deliberately skipped the `gpt` step as I don't think FreeNAS 11.1 ships it (at least it returned `Command not found` for me),
 replacing it with `dd` as suggested by [Dan in his guide](https://www.dan.me.uk/blog/2009/06/03/partitioningformatting-disks-in-freebsd-manual-method/).  
 By the way, do I have to remind that this is **super** dangerous if you're not careful?
+
 2. Mounting UFS on Windows  
 ...is not possible.
 But you can use something like [`ufs2tools`](http://ufs2tools.sourceforge.net) to manually access the contents of a UFS partition.
@@ -166,13 +169,14 @@ The steps are roughly as follows:
  * use `bsdlabel` to figure out the index of the partition (`a` translated to 0, `b` to 1 etc. - yes this is 0-indexed for a change),
  * use `ufs2tool` to list (`-l`) or extract (`-g`) data from the disk.
 
- This guide didn't exactly work for me, maybe because my disk only has a single partition.
+This guide didn't exactly work for me, maybe because my disk only has a single partition.
 Even though, according to their numbering scheme, my *slice* would be called `2/1`, when I did `bsdlabel 2/1` I'd get a "could not open device" error.
 Calling `bsdlabel 2` did the trick.  
 Then you're supposed to do `ufs2tool d/s/p -l` to list the data(`d` for disk, `s` for slice, `p` for partition),
 but when I did `ufs2tool 2/1/0 -l` I'd again get the "could not open device".
 Strangely enough, `ufs2tool 2/0/ -l` worked - with this hanging slash.  
 To copy files from the UFS partition onto your internal HDD, you run `ufs2tool d/s/p -g /path/to/the/archive.tar.gz.aes C:\save\this\here\archive.tar.gz.aes`, in my case `ufs2tool 2/0/ -g ...`.
+
 3. Decrypt data on Windows  
 The script, unless you change something, encrypts the archive with OpenSSL's implementation of AES-256-CBC.
 In order to decrypt those files, I recommend getting an OpenSSL binary - for example from [overbyte.eu](http://wiki.overbyte.eu/wiki/index.php/ICS_Download#Download_OpenSSL_Binaries_.28required_for_SSL-enabled_components.29).
