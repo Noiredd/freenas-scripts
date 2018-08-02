@@ -87,12 +87,14 @@ if [ ! -f $BPATH/dmesg.log ]; then
 fi
 #Check the most recent dmesg output against the previously stored
 dmesg > $BPATH/dmesg-new.log
-DISKLINE=$(diff $BPATH/dmesg.log $BPATH/dmesg-new.log | grep "$DISKNAME")
+DISKLINE=$(diff $BPATH/dmesg.log $BPATH/dmesg-new.log | grep "$DISKNAME" | tail -n 1)
 #Store the most recent dmesg early, as a precaution against executing immediately again
 mv $BPATH/dmesg-new.log $BPATH/dmesg.log
-#We know the disk *was* connected if a dmesg diff contains its serial number
-#We know it is *still* connected if the diff does *not* contain the word "detached"
-if [ -z "$DISKLINE" ] || [ -n $(echo $DISKLINE | grep -v "detached") ]; then
+#Disk serial number can only occur on the attachment or deattachment lines. We are interested in
+#the most recent state, i.e. the last line ("tail -n 1" above) - if it contains the word "detached"
+#then the disk is no longer available (e.g. it could have been plugged in and immediately out
+#between two consecutive executions of the script). Otherwise it is still there so we can proceed.
+if [ -z "$DISKLINE" ] || [ -n "$(echo $DISKLINE | grep detached)" ]; then
     echo "Disk has not been connected"
     exit 1
 fi
