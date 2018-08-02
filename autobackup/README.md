@@ -60,6 +60,9 @@ Download the script:
 ```bash
 wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/autobackup/backup.sh
 chmod +x backup.sh
+# It turns out that somewhere between git and GitHub, '\n' endlines were changed to '\r\n'
+# the following sed will get it back to unixy.
+sed 's/\r\n/\n/g' <backup.sh >backup.sh
 ```
 **Important:** if you decided on a different path, you have to edit the script accordingly:
 variable `BPATH` (line 10) tells the script where to look for configs, put any temps and so on.
