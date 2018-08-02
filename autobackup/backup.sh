@@ -6,6 +6,7 @@
 #   3 - error unmounting drive
 #   9 - first run, ignored
 
+export LC_ALL=en_US.UTF-8 #cron ignores the system setting and executes with C locale
 CUR_DATE=$(date "+%Y-%m-%d")
 BPATH=/opt/autobackup
 LOGFL=$BPATH/backup-$CUR_DATE.log
