@@ -98,7 +98,6 @@ if [ -z "$DISKLINE" ] || [ -n "$(echo $DISKLINE | grep detached)" ]; then
     echo "Disk has not been connected"
     exit 1
 fi
-echo "DISK $DISKNAME CONNECTED AT" $(date) | mail -s "Disk connected, starting backup" $INFOMAIL
 
 #At this point we are ready to perform the backup
 echo "Starting backup at" $(date) > $LOGFL
@@ -113,7 +112,7 @@ DISK_PRT=$(ls /dev | grep "$DISK_DEV" | sed -n 2p)
 if [ ! -d "/mnt/$MOUNTDIR" ]; then
     mkdir /mnt/$MOUNTDIR
 fi
-mount "/dev/$DISK_PRT" "/mnt/$MOUNTDIR"
+mount "/dev/$DISK_PRT" "/mnt/$MOUNTDIR" 2>> $LOGFL
 ERROR=$?
 if [ $ERROR -gt 0 ]; then
     echo "Error $ERROR mounting disk /dev/$DISK_PRT!" >> $LOGFL
@@ -121,6 +120,9 @@ if [ $ERROR -gt 0 ]; then
     exit 2
 fi
 echo "Disk /dev/$DISK_PRT mounted under /mnt/$MOUNTDIR" >> $LOGFL
+
+#This is the right moment to send the first notification
+echo "Disk $DISKNAME successfully mounted on" $(date) | mail -s "Disk connected, starting backup" $INFOMAIL
 
 #Backup each location from the paths file
 echo "Starting backing up locations from paths.conf" >> $LOGFL
@@ -141,8 +143,13 @@ cat $BPATH/lists.conf | while read -r line; do
     fi
 done
 
+#Check remaining space and add it to the log
+DISKSPCH=$(df -h | grep "$DISK_PRT" | awk '{print $4}')
+DISKSPCB=$(df    | grep "$DISK_PRT" | awk '{print $4}')
+echo "Space left on the disk: $DISKSPCH ($DISKSPCB bytes)" >> $LOGFL
+
 #Unmount the drive and store the updated dmesg (wait a little bit to make sure it's updated)
-umount /mnt/$MOUNTDIR
+umount /mnt/$MOUNTDIR 2>> $LOGFL
 ERROR=$?
 if [ $ERROR -gt 0 ]; then
     echo "Error $ERROR unmounting disk!" >> $LOGFL
@@ -154,5 +161,5 @@ sleep 5
 dmesg > $BPATH/dmesg.log
 
 #Notify about job completion
-echo "Backup completed at" $(date) >> $LOGFL
+echo "Backup completed on" $(date) >> $LOGFL
 cat $LOGFL | mail -s "Backup complete!" $INFOMAIL
