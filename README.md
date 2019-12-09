@@ -10,6 +10,7 @@ I haven't built *all* of this code myself - parts have been adapted or straight 
 
 * [OpenVPN + Transmission](/openvpn) (with port forwarding and downtime detection)
 * [AutoBackup](/autobackup) (have your server detect you've just connected an external HDD and automatically backup to it with encryption)
+* [SMARTmail](/smartmail) (periodically receive e-mails with results of the last SMART health check)
 * torrent management (maybe coming sometime)
 
 #### Disclaimer
