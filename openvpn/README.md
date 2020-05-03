@@ -40,6 +40,7 @@ mkdir openvpn
 cd openvpn
 # you will need the following packages:
 pkg update
+pkg install jq
 pkg install wget
 pkg install openvpn
 # download and unpack the PIA configuration files
