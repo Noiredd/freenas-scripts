@@ -5,9 +5,15 @@
 # This has to be ran as a cron job as a workaround for some segfaults due to
 # mismatched libraries which popped up for me when executing this directly from
 # the openvpn up script.
-path="/usr/local/etc/openvpn"
+path="/opt/openvpn"
 cred="$path/transmission.credentials"
 intf="tun0"
+
+# Check if the stop flag has been set and exit if so
+running=$(. $path/vpn_isrunning.sh)
+if [ $running -eq 0 ]; then
+  exit 1
+fi
 
 # Set Transmission port
 if [ -f $path/port.id ]; then
@@ -33,6 +39,7 @@ fi
 # when it encounters the string "does not exist" (which is either not going to
 # happen at all, or right on the first line), it outputs 1 (otherwise 0).
 check=$(ifconfig $intf 2>&1 | awk '/does not exist/ {f=1}; BEGIN{f=0}; END{print f}')
+
 # If we got 1, means the tunnel should be (re?)started.
 if [ "$check" == "1" ]; then
   . $path/vpn_log.sh "Tunnel down! Restarting OpenVPN"

@@ -2,7 +2,7 @@
 # Requests a port from PIA and stores its number in a specific file.
 # A periodic cron job must be set up with another script to scan for that file
 # and do the rest of the job.
-path="/usr/local/etc/openvpn"
+path="/opt/openvpn"
 
 port_request () {
   client_id=`head -n 100 /dev/urandom | shasum -a 256 | tr -d " -"`

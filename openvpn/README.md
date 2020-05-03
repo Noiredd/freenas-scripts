@@ -32,7 +32,7 @@ jexec 4 tcsh
 ```
 3. Set up OpenVPN.  
 The following guide is adapted from [Tango](https://forums.freenas.org/index.php?members/tango.44547/)'s [great guide](https://forums.freenas.org/index.php?threads/guide-setting-up-transmission-with-openvpn-and-pia.24566/), which has in turn been adapted from [fizassist](https://forums.freenas.org/index.php?members/fizassist.77752/)'s [earlier guide](https://forums.freenas.org/index.php?threads/guide-setting-up-transmission-with-openvpn-and-pia.24566/page-24#post-404858), and has bits of [shutyourj](https://www.reddit.com/user/shutyourj)'s [reddit tutorial](https://www.reddit.com/r/freenas/comments/41fhz3/configuration_guide_for_openvpn_and_ipfw_so_that/) in it.
-My personal preference is to set everything in `/usr/local/etc` - you might prefer a different location.  
+I highly recommend putting everything in `/usr/local/etc/` as this is OpenVPN's default settings location.  
 See the [list of PIA servers that allow port forwarding](https://www.privateinternetaccess.com/helpdesk/kb/articles/how-do-i-enable-port-forwarding-on-my-vpn).
 ```bash
 cd /usr/local/etc
@@ -61,32 +61,23 @@ openvpn_enable="YES"
 openvpn_configfile="/usr/local/etc/openvpn/openvpn.conf"
 X
 ```
-4. Configure IPFW so none of the Transmission traffic is allowed outside VPN.
-```bash
-# download the reference rules
-# (alternatively, you could download the entire repository and unzip files)
-wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/ipfw.rules
-# my reference rules are for a gateway 192.168.0.0, so be sure to adjust for yours
-# the actual configuration happens now
-cat > /etc/rc.conf.d/ipfw <<X
-firewall_enable="YES"
-firewall_script="/usr/local/etc/openvpn/ipfw.rules"
-X
-```
-5. Set up the scripts that automate port forwarding and downtime detection.
+4. Set up the scripts that automate port forwarding and downtime detection.
+I like to put them in a separate directory, for example `/opt/openvpn/`.
+Feel free to adjust that to your liking,
+but keep in mind that each script actually uses the absolute path to the others,
+so you will have to `sed` them all in this case (change the `$path` variable).
 ```bash
 # get the scripts (read the comments in them for details)
-# if you decided to put all this into a directory other than default
-# (/usr/local/etc/openvpn), be sure to edit the scripts (change $path variable)
-wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_up.sh
-wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_request.sh
-wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_monitor.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_isrunning.sh
 wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_log.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_monitor.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_request.sh
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/vpn_up.sh
 # set the execution privilege bit
 chmod +x vpn_*
 # configure openvpn to execute the script at start time
-cat >> openvpn.conf <<X
-up /usr/local/etc/openvpn/vpn_up.sh
+cat >> /usr/local/etc/openvpn/openvpn.conf <<X
+up /opt/openvpn/vpn_up.sh
 up-restart
 X
 # if you set your credentials for Transmission RPC, write them to a file
@@ -97,11 +88,27 @@ X
 # in case the port number acquisition fails, the script can notify about that
 # by writing to a given file - just store its path under notify.path
 # (this is recommended, as the downtime detector will also write there)
-printf '/media/downloads/VPN.log' > notify.path # whatever path
+printf '/media/downloads/VPN.log' > notify.path  # adjust the path
 # finally, set cron to run the monitoring script periodically and as root
 # (adjust the path if necessary)
-echo "* * * * * /usr/local/etc/openvpn/vpn_monitor.sh" > cron.tab
+echo "* * * * * /opt/openvpn/vpn_monitor.sh" > cron.tab
 crontab cron.tab
+```
+At this moment the OpenVPN downtime detector is up and running.
+You can temporarily stop it by creating a file `stop.it`,
+whose presence will cease all activity of the scripts
+(i.e. cron monitoring - **not** the OpenVPN service).
+5. Configure IPFW so none of the Transmission traffic is allowed outside VPN.
+```bash
+# download the reference rules
+# (alternatively, you could download the entire repository and unzip files)
+wget https://raw.githubusercontent.com/Noiredd/freenas-scripts/master/openvpn/ipfw.rules
+# my reference rules are for a gateway 192.168.0.0, so be sure to adjust for yours
+# the actual configuration happens now
+cat > /etc/rc.conf.d/ipfw <<X
+firewall_enable="YES"
+firewall_script="/opt/openvpn/ipfw.rules"
+X
 ```
 6. Exit the jail and restart it.
 You can check that it works using [TorGuard's tool for torrent IP checking](torguard.net/checkmytorrentipaddress.php).
